@@ -7,15 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 md:p-6">
-    <div class="max-w-4xl mx-auto space-y-6">
+    <div class="max-w-5xl mx-auto space-y-6">
         
-        <!-- Header -->
         <div class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700">
             <h1 class="text-lg md:text-xl font-bold text-blue-400">داشبورد مدیریت VLESS</h1>
             <button onclick="logout()" class="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded text-sm font-semibold">خروج</button>
         </div>
 
-        <!-- System Stats -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
                 <div class="flex justify-between mb-2">
@@ -37,19 +35,18 @@
             </div>
         </div>
 
-        <!-- User Management -->
         <div class="bg-gray-800 p-4 md:p-6 rounded-xl border border-gray-700 space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-base md:text-lg font-bold">مدیریت کاربران</h2>
-                <button onclick="openModal()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-1">+ کاربر جدید</button>
+                <button onclick="openModal()" class="bg-green-600 hover:bg-green-500 px-4 py-2 rounded-lg text-sm font-bold">+ کاربر جدید</button>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="w-full text-right border-collapse min-w-[600px]">
+                <table class="w-full text-right border-collapse min-w-[650px]">
                     <thead>
                         <tr class="border-b border-gray-700 text-gray-400 text-sm">
                             <th class="p-3">نام</th>
-                            <th class="p-3">سقف حجم</th>
+                            <th class="p-3">مصرف / سقف حجم</th>
                             <th class="p-3">اعتبار باقی‌مانده</th>
                             <th class="p-3">وضعیت</th>
                             <th class="p-3 text-center">عملیات</th>
@@ -61,7 +58,7 @@
         </div>
     </div>
 
-    <!-- Modal (پاپ‌آپ ساخت کاربر جدید) -->
+    <!-- Modal ساخت کاربر -->
     <div id="user-modal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
         <div class="bg-gray-800 border border-gray-700 rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
             <h3 class="text-lg font-bold text-blue-400 mb-2">ساخت کاربر جدید</h3>
@@ -82,7 +79,6 @@
                     <option value="7">۷ روز (۱ هفته)</option>
                     <option value="30" selected>۳۰ روز (۱ ماه)</option>
                     <option value="90">۹۰ روز (۳ ماه)</option>
-                    <option value="365">۳۶۵ روز (۱ سال)</option>
                     <option value="0">نامحدود</option>
                 </select>
             </div>
@@ -116,10 +112,13 @@
             const tbody = document.getElementById('client-list');
             tbody.innerHTML = '';
             
-            const currentHost = window.location.hostname;
+            const protocol = window.location.protocol;
+            const currentHost = window.location.host;
             
             clients.forEach(c => {
-                const vlessLink = `vless://${c.id}@${currentHost}:443?path=%2Fvless&security=tls&encryption=none&type=ws#${encodeURIComponent(c.email)}`;
+                const subLink = `${protocol}//${currentHost}/sub/${c.id}`;
+                const limitText = c.limit_gb > 0 ? `${c.limit_gb} GB` : 'نامحدود';
+                
                 const statusBadge = c.status === 'active' 
                     ? '<span class="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs">فعال</span>'
                     : '<span class="bg-red-500/20 text-red-400 px-2 py-0.5 rounded text-xs">منقضی شده</span>';
@@ -127,11 +126,11 @@
                 tbody.innerHTML += `
                     <tr>
                         <td class="p-3 font-semibold text-blue-300">${c.email}</td>
-                        <td class="p-3 text-gray-300">${c.limit_gb} GB</td>
+                        <td class="p-3 text-gray-300">${c.used_formatted} / ${limitText}</td>
                         <td class="p-3 text-gray-300">${c.days_left} روز</td>
                         <td class="p-3">${statusBadge}</td>
                         <td class="p-3 text-center space-x-2 space-x-reverse">
-                            <button onclick="navigator.clipboard.writeText('${vlessLink}'); alert('لینک کپی شد!')" class="bg-gray-700 hover:bg-gray-600 px-2.5 py-1 rounded text-xs">کپی لینک</button>
+                            <button onclick="navigator.clipboard.writeText('${subLink}'); alert('لینک سابسکریپشن کپی شد!')" class="bg-blue-600/80 hover:bg-blue-600 px-2.5 py-1 rounded text-xs">کپی سابسکریپشن</button>
                             <button onclick="deleteClient('${c.id}')" class="bg-red-600/80 hover:bg-red-600 px-2.5 py-1 rounded text-xs">حذف</button>
                         </td>
                     </tr>
