@@ -10,5 +10,5 @@ nginx
 # اجرای پنل مدیریت پایتون
 python3 /app/app.py &
 
-# اجرای هسته Xray
-xray run -c /etc/xray/config.json
+# نگهدارنده続く بودن کانتینر
+while true; do sleep 1; done
