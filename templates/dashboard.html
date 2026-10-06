@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>داشبورد مدیریت Xray</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-6">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <!-- Header -->
+        <div class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700">
+            <h1 class="text-xl font-bold text-blue-400">داشبورد مدیریت سرور VLESS</h1>
+            <button onclick="logout()" class="bg-red-600 hover:bg-red-500 px-4 py-1.5 rounded text-sm font-semibold">خروج</button>
+        </div>
+
+        <!-- System Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-400">مصرف پردازنده (CPU)</span>
+                    <span id="cpu-text" class="font-bold text-blue-400">0%</span>
+                </div>
+                <div class="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+                    <div id="cpu-bar" class="bg-blue-500 h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+            <div class="bg-gray-800 p-5 rounded-xl border border-gray-700">
+                <div class="flex justify-between mb-2">
+                    <span class="text-gray-400">مصرف حافظه (RAM)</span>
+                    <span id="ram-text" class="font-bold text-green-400">0 MB / 0 MB</span>
+                </div>
+                <div class="w-full bg-gray-700 h-3 rounded-full overflow-hidden">
+                    <div id="ram-bar" class="bg-green-500 h-full w-0 transition-all duration-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Management -->
+        <div class="bg-gray-800 p-6 rounded-xl border border-gray-700 space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-bold">مدیریت کاربران (UUIDs)</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="new-email" placeholder="نام کاربر" class="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm focus:outline-none">
+                    <button onclick="addClient()" class="bg-green-600 hover:bg-green-500 px-4 py-1.5 rounded text-sm font-bold">+ ساخت کاربر</button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="border-b border-gray-700 text-gray-400 text-sm">
+                            <th class="p-3">نام</th>
+                            <th class="p-3">شناسه (UUID)</th>
+                            <th class="p-3 text-center">عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="client-list" class="divide-y divide-gray-700 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchStats() {
+            const res = await fetch('/api/stats');
+            if (res.status === 401) return location.reload();
+            const data = await res.json();
+            
+            document.getElementById('cpu-text').innerText = data.cpu + '%';
+            document.getElementById('cpu-bar').style.width = data.cpu + '%';
+            
+            document.getElementById('ram-text').innerText = `${data.ram_used_mb}MB / ${data.ram_total_mb}MB (${data.ram_percent}%)`;
+            document.getElementById('ram-bar').style.width = data.ram_percent + '%';
+        }
+
+        async function fetchClients() {
+            const res = await fetch('/api/clients');
+            const clients = await res.json();
+            const tbody = document.getElementById('client-list');
+            tbody.innerHTML = '';
+            
+            const currentHost = window.location.hostname;
+            
+            clients.forEach(c => {
+                const vlessLink = `vless://${c.id}@${currentHost}:443?path=%2Fvless&security=tls&encryption=none&type=ws#${encodeURIComponent(c.email)}`;
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-3 font-semibold text-blue-300">${c.email}</td>
+                        <td class="p-3 font-mono text-xs text-gray-400">${c.id}</td>
+                        <td class="p-3 text-center space-x-2 space-x-reverse">
+                            <button onclick="navigator.clipboard.writeText('${vlessLink}'); alert('لینک VLESS کپی شد!')" class="bg-gray-700 hover:bg-gray-600 px-2.5 py-1 rounded text-xs">کپی لینک</button>
+                            <button onclick="deleteClient('${c.id}')" class="bg-red-600/80 hover:bg-red-600 px-2.5 py-1 rounded text-xs">حذف</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        async function addClient() {
+            const email = document.getElementById('new-email').value;
+            await fetch('/api/clients/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ email })
+            });
+            document.getElementById('new-email').value = '';
+            fetchClients();
+        }
+
+        async function deleteClient(id) {
+            if (!confirm('آیا از حذف این کاربر مطمئن هستید؟')) return;
+            const res = await fetch('/api/clients/delete', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ id })
+            });
+            const data = await res.json();
+            if (!data.success) alert(data.message);
+            fetchClients();
+        }
+
+        async function logout() {
+            await fetch('/api/logout', {method: 'POST'});
+            location.reload();
+        }
+
+        setInterval(fetchStats, 3000);
+        fetchStats();
+        fetchClients();
+    </script>
+</body>
+</html>
